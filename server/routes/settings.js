@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getDb } from '../db.js';
 import { getSettings } from '../invoiceService.js';
-import { round2, DATE_RE } from '../util.js';
+import { round2 } from '../util.js';
 
 const router = Router();
 
@@ -53,20 +53,5 @@ router.put('/', async (req, res) => {
   await db('settings').where({ id: 1 }).update(update);
   res.json(await getSettings());
 });
-
-// Lightweight validation helpers reused by other routes
-export async function assertClientExists(clientId) {
-  const db = getDb();
-  const c = await db('clients').where({ id: Number(clientId) }).first();
-  if (!c) throw Object.assign(new Error('Client not found'), { status: 400 });
-  return c;
-}
-
-export function assertDate(value, label = 'Date') {
-  if (!DATE_RE.test(String(value || ''))) {
-    throw Object.assign(new Error(`${label} must be in YYYY-MM-DD format`), { status: 400 });
-  }
-  return String(value);
-}
 
 export default router;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, fmtMoney, round2, todayISO } from '../api.js';
+import { api, fmtMoney, fmtDate, round2, todayISO } from '../api.js';
 
 const blank = { client_id: '', entry_date: todayISO(), hours: '7.5', break_minutes: '30', description: '', rate: '' };
 
@@ -134,7 +134,7 @@ export default function TimeEntries() {
           </label>
           <label>
             Hourly rate {settings.default_rate ? <span className="muted small">(default {fmtMoney(settings.default_rate, cur)})</span> : ''}
-            <input type="number" min="0" step="0.01" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} placeholder={String(settings.default_rate || 0)} />
+            <input type="number" min="0" step="0.01" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} placeholder="uses default" />
           </label>
           <label className="span2">
             Description
@@ -197,7 +197,7 @@ export default function TimeEntries() {
             <tbody>
               {entries.map((e) => (
                 <tr key={e.id}>
-                  <td>{e.entry_date}</td>
+                  <td>{fmtDate(e.entry_date, settings.date_format)}</td>
                   <td>{e.client_name}</td>
                   <td>{e.description || <span className="muted">—</span>}{e.invoice_id && <span className="tag good">invoiced</span>}</td>
                   <td className="right">{e.hours}</td>

@@ -5,6 +5,10 @@ import { api, fmtMoney, billable, round2, todayISO, addDaysISO } from '../api.js
 
 const emptyManual = () => ({ description: '', quantity: 1, unit_price: 0 });
 
+// Ignore untouched/empty rows so a stray $0 "Item" line never reaches the invoice.
+const meaningfulManual = (m) =>
+  (m.description || '').trim() !== '' || (Number(m.quantity) > 0 && Number(m.unit_price) > 0);
+
 export default function InvoiceEditor() {
   const { id } = useParams();
   const editing = Boolean(id);
@@ -80,6 +84,7 @@ export default function InvoiceEditor() {
         unit_price: Number(e.rate),
       }));
     const manualItems = manual
+      .filter(meaningfulManual)
       .filter((m) => Number(m.quantity) > 0)
       .map((m) => ({ description: m.description || 'Item', entry_date: null, quantity: Number(m.quantity), unit_price: Number(m.unit_price) }));
     return [...fromEntries, ...manualItems];
@@ -123,8 +128,8 @@ export default function InvoiceEditor() {
           client_id: Number(clientId),
           issue_date: issueDate,
           due_date: dueDate || null,
-          entry_ids: [...selected],
-          manual_items: manual.filter((m) => Number(m.quantity) > 0),
+        entry_ids: [...selected],
+        manual_items: manual.filter(meaningfulManual).filter((m) => Number(m.quantity) > 0),
           discount: Number(discount) || 0,
           gst_enabled: gstEnabled,
           gst_rate: Number(gstRate) || 0,
@@ -397,7 +402,7 @@ export default function InvoiceEditor() {
             </div>
             {!editing && (
               <p className="muted small">
-                {selected.size} time {selected.size === 1 ? 'entry' : 'entries'} + {manual.filter((m) => Number(m.quantity) > 0).length} manual item(s)
+                {selected.size} time {selected.size === 1 ? 'entry' : 'entries'} + {manual.filter(meaningfulManual).filter((m) => Number(m.quantity) > 0).length} manual item(s)
               </p>
             )}
           </div>

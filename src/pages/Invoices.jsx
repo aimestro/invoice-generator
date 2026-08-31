@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, downloadFile, fmtMoney, fmtDate, todayISO } from '../api.js';
+import { api, downloadFile, fmtMoney, fmtDate } from '../api.js';
 import StatusBadge from '../components/StatusBadge.jsx';
 
 export default function Invoices() {
@@ -25,8 +25,6 @@ export default function Invoices() {
       .catch((e) => setError(e.message));
   };
   useEffect(load, [status, clientId]);
-
-  const today = todayISO();
 
   const doAction = async (id, fn) => {
     setBusyId(id);
@@ -143,7 +141,7 @@ export default function Invoices() {
           </table>
         )}
       </div>
-      <p className="muted small">Tip: {today && 'overdue invoices are highlighted red automatically.'}</p>
+      <p className="muted small">Tip: overdue invoices are highlighted red automatically.</p>
     </div>
   );
 }

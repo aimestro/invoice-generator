@@ -1,2 +1,14 @@
 Invoice Studio running at http://localhost:5175
 Database: sqlite (C:\Users\use69\.zcode\workspace\default\invoice-generator\data\invoice.db)
+file:///C:/Users/use69/.zcode/workspace/default/invoice-generator/server/routes/entries.js:52
+    throw Object.assign(new Error('Hours worked must be a number ≥ 0'), { status: 400 });
+                        ^
+
+Error: Hours worked must be a number ≥ 0
+    at validate (file:///C:/Users/use69/.zcode/workspace/default/invoice-generator/server/routes/entries.js:52:25)
+    at file:///C:/Users/use69/.zcode/workspace/default/invoice-generator/server/routes/entries.js:63:3
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  status: 400
+}
+
+Node.js v24.19.0

@@ -10,13 +10,14 @@
     "dev:web": "vite",
     "build": "vite build",
     "start": "node server/index.js",
-    "preview": "npm run build && npm start"
+    "preview": "npm run build && npm start",
+    "reset-password": "node server/reset-password.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",
     "cors": "^2.8.5",
     "exceljs": "^4.4.0",
-    "express": "^4.21.2",
+    "express": "^5.2.1",
     "knex": "^3.1.0",
     "mysql2": "^3.11.0",
     "pdfkit": "^0.17.1",

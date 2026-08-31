@@ -5,7 +5,7 @@ import { insertIdFromResult, todayISO } from '../util.js';
 
 const router = Router();
 
-const TABLES = ['clients', 'invoices', 'invoice_items', 'time_entries', 'settings'];
+const TABLES = ['clients', 'invoices', 'invoice_items', 'time_entries', 'settings', 'users'];
 
 router.get('/backup', async (req, res) => {
   const db = getDb();
@@ -23,17 +23,20 @@ router.post('/restore', async (req, res) => {
   const db = getDb();
   try {
     await db.transaction(async (trx) => {
-      // Children first to avoid dangling references while deleting
+      // Children first to avoid dangling references while deleting; sessions are
+      // always cleared (restored users may differ from the signed-in one).
+      await trx('sessions').del();
       await trx('invoice_items').del();
       await trx('time_entries').del();
       await trx('invoices').del();
       await trx('clients').del();
       await trx('settings').del();
+      await trx('users').del();
       if (Array.isArray(dump.tables.settings) && dump.tables.settings.length) {
         const s = dump.tables.settings[0];
         await trx('settings').insert({ ...s, id: 1 });
       }
-      for (const t of ['clients', 'invoices', 'time_entries', 'invoice_items']) {
+      for (const t of ['users', 'clients', 'invoices', 'time_entries', 'invoice_items']) {
         const rows = dump.tables[t];
         if (Array.isArray(rows) && rows.length) await trx(t).insert(rows);
       }

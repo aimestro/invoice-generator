@@ -158,6 +158,25 @@ async function ensureSchema(db) {
     });
   }
 
+  if (!(await has('users'))) {
+    await db.schema.createTable('users', (t) => {
+      t.increments('id').primary();
+      t.string('name', 200).notNullable();
+      t.string('email', 200).notNullable().unique();
+      t.text('password_hash').notNullable();
+      t.timestamp('created_at').notNullable().defaultTo(db.fn.now());
+    });
+  }
+
+  if (!(await has('sessions'))) {
+    await db.schema.createTable('sessions', (t) => {
+      t.string('token', 128).primary();
+      t.integer('user_id').notNullable().index();
+      t.string('expires_at', 40).notNullable();
+      t.timestamp('created_at').notNullable().defaultTo(db.fn.now());
+    });
+  }
+
   if (!(await has('settings'))) {
     await db.schema.createTable('settings', (t) => {
       t.integer('id').primary();
@@ -204,7 +223,7 @@ export async function initDb(cfg = readDbConfig()) {
 export async function fixSequences(db) {
   // Only PostgreSQL needs sequence re-alignment after explicit-id inserts.
   if (!db || db.client.config.client !== 'pg') return;
-  const tables = ['clients', 'time_entries', 'invoices', 'invoice_items'];
+  const tables = ['clients', 'time_entries', 'invoices', 'invoice_items', 'users'];
   for (const t of tables) {
     await db.raw(
       `select setval(pg_get_serial_sequence('${t}', 'id'), coalesce((select max(id) from ${t}), 1))`
