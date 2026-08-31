@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
 import { getDb } from './db.js';
 
+
 export const COOKIE = 'invoice_session';
 const SESSION_DAYS = 30;
+const VERIFICATION_DAYS = 7;
 
 // scrypt from Node's built-in crypto — no extra dependency, solid KDF.
 export function hashPassword(password) {
@@ -60,7 +62,7 @@ export async function getSessionUser(req) {
   const db = getDb();
   const row = await db('sessions')
     .join('users', 'users.id', 'sessions.user_id')
-    .select('users.id', 'users.name', 'users.email', 'sessions.token', 'sessions.expires_at')
+    .select('users.id', 'users.name', 'users.email', 'users.email_verified', 'sessions.token', 'sessions.expires_at')
     .where({ token })
     .first();
   if (!row) return null;
@@ -68,7 +70,7 @@ export async function getSessionUser(req) {
     await db('sessions').where({ token }).del();
     return null;
   }
-  return { id: row.id, name: row.name, email: row.email };
+  return { id: row.id, name: row.name, email: row.email, emailVerified: Boolean(row.email_verified) };
 }
 
 export async function requireAuth(req, res, next) {
@@ -80,4 +82,44 @@ export async function requireAuth(req, res, next) {
   } catch (err) {
     next(err);
   }
+}
+
+// Email verification helpers
+export async function createVerificationToken(userId) {
+  const db = getDb();
+  const token = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + VERIFICATION_DAYS * 86400000).toISOString();
+  await db('email_verifications').insert({ token, user_id: userId, expires_at: expires });
+  return token;
+}
+
+export async function verifyEmailToken(token) {
+  const db = getDb();
+  const row = await db('email_verifications').where({ token }).first();
+  if (!row) return { ok: false, error: 'Invalid or expired verification link' };
+  if (new Date(row.expires_at) < new Date()) {
+    await db('email_verifications').where({ token }).del();
+    return { ok: false, error: 'Verification link has expired' };
+  }
+  await db('users').where({ id: row.user_id }).update({ email_verified: 1 });
+  await db('email_verifications').where({ token }).del();
+  return { ok: true };
+}
+
+export async function sendVerificationEmail(email, token, baseUrl) {
+  // In production, integrate with a real email service (SendGrid, Mailgun, etc.)
+  // For now, log the verification URL to console (dev mode)
+  const verifyUrl = `${baseUrl}/verify-email?token=${token}`;
+  console.log('\n========================================');
+  console.log('EMAIL VERIFICATION LINK (dev mode):');
+  console.log(`To: ${email}`);
+  console.log(`Verify: ${verifyUrl}`);
+  console.log('========================================\n');
+  // Return the URL for testing purposes
+  return verifyUrl;
+}
+
+// Check if we should require email verification (can be disabled for testing)
+export function isEmailVerificationRequired() {
+  return process.env.REQUIRE_EMAIL_VERIFICATION !== 'false';
 }

@@ -158,12 +158,22 @@ async function ensureSchema(db) {
     });
   }
 
+  if (!(await has('email_verifications'))) {
+    await db.schema.createTable('email_verifications', (t) => {
+      t.string('token', 128).primary();
+      t.integer('user_id').notNullable().index();
+      t.string('expires_at', 40).notNullable();
+      t.timestamp('created_at').notNullable().defaultTo(db.fn.now());
+    });
+  }
+
   if (!(await has('users'))) {
     await db.schema.createTable('users', (t) => {
       t.increments('id').primary();
       t.string('name', 200).notNullable();
       t.string('email', 200).notNullable().unique();
       t.text('password_hash').notNullable();
+      t.integer('email_verified').notNullable().defaultTo(0);
       t.timestamp('created_at').notNullable().defaultTo(db.fn.now());
     });
   }
