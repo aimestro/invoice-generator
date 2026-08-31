@@ -1,6 +1,6 @@
-"import { Router } from 'express';
+import { Router } from 'express';
 import { getDb } from '../db.js';
-import { hashPassword, verifyPassword, createSession, clearSessionCookie, destroySession, getSessionUser, createVerificationToken, verifyEmailToken, sendVerificationEmail, isEmailVerificationRequired } from '../auth.js';
+import { hashPassword, verifyPassword, createSession, clearSessionCookie, destroySession, getSessionUser, createVerificationToken, verifyEmailToken, sendVerificationEmail, isEmailVerificationRequired, createPasswordResetToken, verifyPasswordResetToken, consumePasswordResetToken, sendPasswordResetEmail } from '../auth.js';
 
 const router = Router();
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -104,6 +104,45 @@ router.post('/resend-verification', async (req, res) => {
   res.json({ ok: true, message: 'If an account exists, a verification email has been sent.' });
 });
 
+// Forgot password - request reset link
+router.post('/forgot-password', async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) {
+    return res.status(400).json({ error: 'Enter a valid email address' });
+  }
+  
+  const db = getDb();
+  const user = await db('users').where({ email }).first();
+  if (!user) {
+    // Don't reveal if email exists
+    return res.json({ ok: true, message: 'If an account exists, a password reset email has been sent.' });
+  }
+  
+  const token = await createPasswordResetToken(user.id);
+  const baseUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5173}`;
+  await sendPasswordResetEmail(email, token, baseUrl);
+  
+  res.json({ ok: true, message: 'If an account exists, a password reset email has been sent.' });
+});
+
+// Reset password with token
+router.post('/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+  if (!token) {
+    return res.status(400).json({ error: 'Invalid reset link' });
+  }
+  if (!password || password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  }
+  
+  const result = await consumePasswordResetToken(token, password);
+  if (!result.ok) {
+    return res.status(400).json({ error: result.error });
+  }
+  
+  res.json({ ok: true, message: 'Password has been reset. You can now sign in with your new password.' });
+});
+
 function insertUserId(result) {
   if (Array.isArray(result)) {
     if (result.length && typeof result[0] === 'object') return result[0].id;
@@ -113,4 +152,4 @@ function insertUserId(result) {
   return result;
 }
 
-export default router;"
+export default router;

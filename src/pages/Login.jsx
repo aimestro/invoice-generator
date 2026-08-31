@@ -52,8 +52,11 @@ export default function Login() {
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
         <button className="btn auth-submit" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-        <p className="muted small" style={{ textAlign: 'center', marginBottom: 0 }}>
+        <p className="muted small" style={{ textAlign: 'center', marginBottom: 0, marginTop: 8 }}>
           New here? <Link to="/signup">Create an account</Link>
+        </p>
+        <p className="muted small" style={{ textAlign: 'center', marginBottom: 0 }}>
+          <Link to="/forgot-password" style={{ color: 'var(--accent)' }}>Forgot password?</Link>
         </p>
       </form>
     </div>
