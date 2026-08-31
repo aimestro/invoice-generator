@@ -158,15 +158,6 @@ async function ensureSchema(db) {
     });
   }
 
-  if (!(await has('password_reset_tokens'))) {
-    await db.schema.createTable('password_reset_tokens', (t) => {
-      t.string('token', 128).primary();
-      t.integer('user_id').notNullable().index();
-      t.string('expires_at', 40).notNullable();
-      t.timestamp('created_at').notNullable().defaultTo(db.fn.now());
-    });
-  }
-
   if (!(await has('email_verifications'))) {
     await db.schema.createTable('email_verifications', (t) => {
       t.string('token', 128).primary();
