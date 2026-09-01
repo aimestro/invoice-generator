@@ -5,6 +5,7 @@ import { getDb } from './db.js';
 export const COOKIE = 'invoice_session';
 const SESSION_DAYS = 30;
 const VERIFICATION_DAYS = 7;
+const PASSWORD_RESET_HOURS = 1;
 
 // scrypt from Node's built-in crypto — no extra dependency, solid KDF.
 export function hashPassword(password) {
@@ -117,6 +118,53 @@ export async function sendVerificationEmail(email, token, baseUrl) {
   console.log('========================================\n');
   // Return the URL for testing purposes
   return verifyUrl;
+}
+
+// Password reset helpers
+export async function createPasswordResetToken(userId) {
+  const db = getDb();
+  const token = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + PASSWORD_RESET_HOURS * 3600000).toISOString();
+  await db('password_reset_tokens').insert({ token, user_id: userId, expires_at: expires });
+  return token;
+}
+
+export async function verifyPasswordResetToken(token) {
+  const db = getDb();
+  const row = await db('password_reset_tokens').where({ token }).first();
+  if (!row) return { ok: false, error: 'Invalid or expired reset link' };
+  if (new Date(row.expires_at) < new Date()) {
+    await db('password_reset_tokens').where({ token }).del();
+    return { ok: false, error: 'Reset link has expired' };
+  }
+  return { ok: true, userId: row.user_id };
+}
+
+export async function consumePasswordResetToken(token, newPassword) {
+  const db = getDb();
+  const row = await db('password_reset_tokens').where({ token }).first();
+  if (!row) return { ok: false, error: 'Invalid or expired reset link' };
+  if (new Date(row.expires_at) < new Date()) {
+    await db('password_reset_tokens').where({ token }).del();
+    return { ok: false, error: 'Reset link has expired' };
+  }
+  await db('users').where({ id: row.user_id }).update({ password_hash: hashPassword(newPassword) });
+  await db('password_reset_tokens').where({ token }).del();
+  // Invalidate all existing sessions for this user
+  await db('sessions').where({ user_id: row.user_id }).del();
+  return { ok: true };
+}
+
+export async function sendPasswordResetEmail(email, token, baseUrl) {
+  // In production, integrate with a real email service (SendGrid, Mailgun, etc.)
+  // For now, log the reset URL to console (dev mode)
+  const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+  console.log('\n========================================');
+  console.log('PASSWORD RESET LINK (dev mode):');
+  console.log(`To: ${email}`);
+  console.log(`Reset: ${resetUrl}`);
+  console.log('========================================\n');
+  return resetUrl;
 }
 
 // Check if we should require email verification (can be disabled for testing)
